@@ -932,8 +932,9 @@ internal sealed class MainForm : Form
                 return;
             }
 
+            var destinationLabel = update.OpensReleasePage ? "release page" : "download page";
             var result = MessageBox.Show(this,
-                $"Version {update.VersionText} is available.\n\nCurrent version: {GitHubReleaseUpdateService.CurrentVersionText}\n\nOpen the download page now?",
+                $"Version {update.VersionText} is available.\n\nCurrent version: {GitHubReleaseUpdateService.CurrentVersionText}\n\nOpen the {destinationLabel} now?",
                 "Update available",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Information,

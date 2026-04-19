@@ -40,3 +40,12 @@ Fog Switcher is an independent project and is not affiliated with Behaviour Inte
 Reading region information does not require administrator rights.
 
 Administrator elevation is only requested when Fog Switcher needs to write to `C:\Windows\System32\drivers\etc\hosts`.
+
+## Release variants
+
+GitHub Releases can provide two Windows download variants:
+
+- `framework-dependent` package: a smaller `.zip` that contains the app files and requires the matching .NET Desktop Runtime to already be installed on the machine.
+- `self-contained` executable: a larger standalone `.exe` that includes the required .NET runtime and is easier to run on a machine that does not already have it installed.
+
+When a release contains multiple valid download assets, Fog Switcher opens the release page so the user can choose the package that fits their system.

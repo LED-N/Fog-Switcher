@@ -10,6 +10,7 @@ internal sealed class AvailableUpdate
     public required string VersionText { get; init; }
     public required string DownloadUrl { get; init; }
     public required string ReleasePageUrl { get; init; }
+    public bool OpensReleasePage { get; init; }
 }
 
 internal sealed class GitHubReleaseUpdateService : IDisposable
@@ -85,7 +86,8 @@ internal sealed class GitHubReleaseUpdateService : IDisposable
         var releasePageUrl = root.TryGetProperty("html_url", out var htmlUrlElement)
             ? htmlUrlElement.GetString()
             : null;
-        var downloadUrl = SelectDownloadUrl(root) ?? releasePageUrl;
+        var selection = SelectDownload(root, releasePageUrl);
+        var downloadUrl = selection?.Url ?? releasePageUrl;
 
         if (string.IsNullOrWhiteSpace(downloadUrl) || string.IsNullOrWhiteSpace(releasePageUrl))
         {
@@ -97,7 +99,8 @@ internal sealed class GitHubReleaseUpdateService : IDisposable
             Version = latestVersion,
             VersionText = latestVersionText,
             DownloadUrl = downloadUrl,
-            ReleasePageUrl = releasePageUrl
+            ReleasePageUrl = releasePageUrl,
+            OpensReleasePage = selection?.OpensReleasePage ?? true
         };
     }
 
@@ -106,7 +109,7 @@ internal sealed class GitHubReleaseUpdateService : IDisposable
         return root.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.True;
     }
 
-    private static string? SelectDownloadUrl(JsonElement root)
+    private static SelectedDownload? SelectDownload(JsonElement root, string? releasePageUrl)
     {
         if (!root.TryGetProperty("assets", out var assetsElement) || assetsElement.ValueKind != JsonValueKind.Array)
         {
@@ -115,6 +118,7 @@ internal sealed class GitHubReleaseUpdateService : IDisposable
 
         string? bestUrl = null;
         var bestScore = -1;
+        var candidateCount = 0;
 
         foreach (var asset in assetsElement.EnumerateArray())
         {
@@ -132,6 +136,11 @@ internal sealed class GitHubReleaseUpdateService : IDisposable
             }
 
             var score = ScoreAsset(name);
+            if (score > 0)
+            {
+                candidateCount++;
+            }
+
             if (score <= bestScore)
             {
                 continue;
@@ -141,7 +150,25 @@ internal sealed class GitHubReleaseUpdateService : IDisposable
             bestUrl = url;
         }
 
-        return bestUrl;
+        if (candidateCount > 1 && !string.IsNullOrWhiteSpace(releasePageUrl))
+        {
+            return new SelectedDownload
+            {
+                Url = releasePageUrl,
+                OpensReleasePage = true
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(bestUrl))
+        {
+            return null;
+        }
+
+        return new SelectedDownload
+        {
+            Url = bestUrl,
+            OpensReleasePage = false
+        };
     }
 
     private static int ScoreAsset(string assetName)
@@ -163,6 +190,12 @@ internal sealed class GitHubReleaseUpdateService : IDisposable
         }
 
         return assetName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+    }
+
+    private sealed class SelectedDownload
+    {
+        public required string Url { get; init; }
+        public bool OpensReleasePage { get; init; }
     }
 
     private static bool TryParseReleaseVersion(string? rawTag, out Version version, out string versionText)

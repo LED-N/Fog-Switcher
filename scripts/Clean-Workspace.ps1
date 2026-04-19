@@ -11,7 +11,8 @@ if (Get-Process -Name devenv -ErrorAction SilentlyContinue) {
 $pathsToRemove = @(
     ".dotnet",
     ".vs",
-    "dist"
+    "dist",
+    "src\FogSwitcher\app.ico"
 )
 
 foreach ($relativePath in $pathsToRemove) {

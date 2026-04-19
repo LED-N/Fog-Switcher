@@ -1,6 +1,7 @@
 /.dotnet/
 /.vs/
 /dist/
+/src/FogSwitcher/app.ico
 **/bin/
 **/obj/
 *.log

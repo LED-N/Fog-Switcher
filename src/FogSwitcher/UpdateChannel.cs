@@ -2,9 +2,8 @@ namespace FogSwitcher;
 
 internal static class UpdateChannel
 {
-    // Set this to "owner/repository" once the GitHub repo exists.
     public const string GitHubRepository = "LED-N/Fog-Switcher";
-    public const string PreferredAssetName = "FogSwitcher.exe";
+    public const string PreferredAutomaticUpdateAssetName = "FogSwitcher-win-x64-self-contained.exe";
 
     public static (string Owner, string Name)? TryGetRepository()
     {

@@ -12,6 +12,7 @@ internal sealed class MainForm : Form
     private readonly LatencyProbeService _latencyProbe = new();
     private readonly HostsFileSelectorService _hostsService = new();
     private readonly GitHubReleaseUpdateService _updateService = new();
+    private readonly SelfUpdateService _selfUpdateService = new();
     private readonly Dictionary<string, RegionCardView> _regionCards = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, long?> _latencies = new(StringComparer.OrdinalIgnoreCase);
     private readonly System.Windows.Forms.Timer _latencyTimer = new();
@@ -932,29 +933,131 @@ internal sealed class MainForm : Form
                 return;
             }
 
-            var destinationLabel = update.OpensReleasePage ? "release page" : "download page";
-            var result = MessageBox.Show(this,
-                $"Version {update.VersionText} is available.\n\nCurrent version: {GitHubReleaseUpdateService.CurrentVersionText}\n\nOpen the {destinationLabel} now?",
-                "Update available",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Information,
-                MessageBoxDefaultButton.Button1);
-
-            if (result != DialogResult.Yes)
-            {
-                return;
-            }
-
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = update.DownloadUrl,
-                UseShellExecute = true
-            });
+            await PromptForUpdateAsync(update);
         }
         catch
         {
             // Update checks are best-effort only.
         }
+    }
+
+    private async Task PromptForUpdateAsync(AvailableUpdate update)
+    {
+        if (update.CanInstallAutomatically)
+        {
+            var result = MessageBox.Show(this,
+                $"Version {update.VersionText} is available.\n\nCurrent version: {GitHubReleaseUpdateService.CurrentVersionText}\n\nYes = download and install automatically\nNo = open the release page\nCancel = later",
+                "Update available",
+                MessageBoxButtons.YesNoCancel,
+                MessageBoxIcon.Information,
+                MessageBoxDefaultButton.Button1);
+
+            if (result == DialogResult.Yes)
+            {
+                await InstallUpdateAsync(update);
+            }
+            else if (result == DialogResult.No)
+            {
+                OpenUrl(update.ReleasePageUrl);
+            }
+
+            return;
+        }
+
+        var openReleasePage = MessageBox.Show(this,
+            $"Version {update.VersionText} is available.\n\nCurrent version: {GitHubReleaseUpdateService.CurrentVersionText}\n\nThis release can be installed manually from the GitHub release page.\n\nOpen it now?",
+            "Update available",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Information,
+            MessageBoxDefaultButton.Button1);
+
+        if (openReleasePage == DialogResult.Yes)
+        {
+            OpenUrl(update.ReleasePageUrl);
+        }
+    }
+
+    private async Task InstallUpdateAsync(AvailableUpdate update)
+    {
+        UpdateProgressForm? progressForm = null;
+
+        try
+        {
+            progressForm = new UpdateProgressForm();
+            progressForm.Show(this);
+            progressForm.BringToFront();
+
+            Enabled = false;
+            UseWaitCursor = true;
+
+            var preparedUpdate = await _selfUpdateService.PrepareUpdateAsync(update);
+            if (IsDisposed || Disposing)
+            {
+                return;
+            }
+
+            CloseProgressForm(progressForm);
+            progressForm = null;
+            Enabled = true;
+            UseWaitCursor = false;
+
+            MessageBox.Show(this,
+                $"Version {update.VersionText} has been downloaded.\n\nFog Switcher will now close, install the update, and restart automatically.",
+                "Installing update",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+
+            _selfUpdateService.LaunchInstaller(preparedUpdate, update.ReleasePageUrl);
+            Close();
+        }
+        catch (Exception ex)
+        {
+            CloseProgressForm(progressForm);
+            progressForm = null;
+
+            Enabled = true;
+            UseWaitCursor = false;
+
+            var result = MessageBox.Show(this,
+                "Fog Switcher could not install the update automatically.\n\n" +
+                ex.Message +
+                "\n\nOpen the release page instead?",
+                "Update failed",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button1);
+
+            if (result == DialogResult.Yes)
+            {
+                OpenUrl(update.ReleasePageUrl);
+            }
+        }
+        finally
+        {
+            CloseProgressForm(progressForm);
+            Enabled = !IsDisposed && !Disposing;
+            UseWaitCursor = false;
+        }
+    }
+
+    private static void CloseProgressForm(Form? progressForm)
+    {
+        if (progressForm is null || progressForm.IsDisposed)
+        {
+            return;
+        }
+
+        progressForm.Close();
+        progressForm.Dispose();
+    }
+
+    private static void OpenUrl(string url)
+    {
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = url,
+            UseShellExecute = true
+        });
     }
 
     private void SelectBestPingRegion()
@@ -1164,6 +1267,7 @@ internal sealed class MainForm : Form
         _queueTimer.Dispose();
         _queueClient.Dispose();
         _updateService.Dispose();
+        _selfUpdateService.Dispose();
     }
 
     // =========================================================================

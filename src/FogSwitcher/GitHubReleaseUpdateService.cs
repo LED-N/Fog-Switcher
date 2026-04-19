@@ -8,9 +8,10 @@ internal sealed class AvailableUpdate
 {
     public required Version Version { get; init; }
     public required string VersionText { get; init; }
-    public required string DownloadUrl { get; init; }
     public required string ReleasePageUrl { get; init; }
-    public bool OpensReleasePage { get; init; }
+    public string? AutomaticInstallUrl { get; init; }
+    public string? AutomaticInstallAssetName { get; init; }
+    public bool CanInstallAutomatically => !string.IsNullOrWhiteSpace(AutomaticInstallUrl);
 }
 
 internal sealed class GitHubReleaseUpdateService : IDisposable
@@ -86,21 +87,20 @@ internal sealed class GitHubReleaseUpdateService : IDisposable
         var releasePageUrl = root.TryGetProperty("html_url", out var htmlUrlElement)
             ? htmlUrlElement.GetString()
             : null;
-        var selection = SelectDownload(root, releasePageUrl);
-        var downloadUrl = selection?.Url ?? releasePageUrl;
-
-        if (string.IsNullOrWhiteSpace(downloadUrl) || string.IsNullOrWhiteSpace(releasePageUrl))
+        if (string.IsNullOrWhiteSpace(releasePageUrl))
         {
             return null;
         }
+
+        var automaticInstall = FindAssetByName(root, UpdateChannel.PreferredAutomaticUpdateAssetName);
 
         return new AvailableUpdate
         {
             Version = latestVersion,
             VersionText = latestVersionText,
-            DownloadUrl = downloadUrl,
             ReleasePageUrl = releasePageUrl,
-            OpensReleasePage = selection?.OpensReleasePage ?? true
+            AutomaticInstallUrl = automaticInstall?.Url,
+            AutomaticInstallAssetName = automaticInstall?.Name
         };
     }
 
@@ -109,16 +109,12 @@ internal sealed class GitHubReleaseUpdateService : IDisposable
         return root.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.True;
     }
 
-    private static SelectedDownload? SelectDownload(JsonElement root, string? releasePageUrl)
+    private static ReleaseAsset? FindAssetByName(JsonElement root, string expectedAssetName)
     {
         if (!root.TryGetProperty("assets", out var assetsElement) || assetsElement.ValueKind != JsonValueKind.Array)
         {
             return null;
         }
-
-        string? bestUrl = null;
-        var bestScore = -1;
-        var candidateCount = 0;
 
         foreach (var asset in assetsElement.EnumerateArray())
         {
@@ -135,67 +131,25 @@ internal sealed class GitHubReleaseUpdateService : IDisposable
                 continue;
             }
 
-            var score = ScoreAsset(name);
-            if (score > 0)
-            {
-                candidateCount++;
-            }
-
-            if (score <= bestScore)
+            if (!string.Equals(name, expectedAssetName, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
-            bestScore = score;
-            bestUrl = url;
-        }
-
-        if (candidateCount > 1 && !string.IsNullOrWhiteSpace(releasePageUrl))
-        {
-            return new SelectedDownload
+            return new ReleaseAsset
             {
-                Url = releasePageUrl,
-                OpensReleasePage = true
+                Name = name,
+                Url = url
             };
         }
 
-        if (string.IsNullOrWhiteSpace(bestUrl))
-        {
-            return null;
-        }
-
-        return new SelectedDownload
-        {
-            Url = bestUrl,
-            OpensReleasePage = false
-        };
+        return null;
     }
 
-    private static int ScoreAsset(string assetName)
+    private sealed class ReleaseAsset
     {
-        if (string.Equals(assetName, UpdateChannel.PreferredAssetName, StringComparison.OrdinalIgnoreCase))
-        {
-            return 4;
-        }
-
-        if (assetName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
-            assetName.Contains("FogSwitcher", StringComparison.OrdinalIgnoreCase))
-        {
-            return 3;
-        }
-
-        if (assetName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
-        {
-            return 2;
-        }
-
-        return assetName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
-    }
-
-    private sealed class SelectedDownload
-    {
+        public required string Name { get; init; }
         public required string Url { get; init; }
-        public bool OpensReleasePage { get; init; }
     }
 
     private static bool TryParseReleaseVersion(string? rawTag, out Version version, out string versionText)

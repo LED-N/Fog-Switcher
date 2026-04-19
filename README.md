@@ -22,6 +22,7 @@ The app combines live latency checks, queue estimates, and a focused region-lock
 - Writes a dedicated Fog Switcher block to the Windows `hosts` file to block other regions.
 - Removes only the entries created by Fog Switcher when you clear the selection.
 - Checks GitHub Releases at startup and can offer a newer version when one is available.
+- Can download and install the self-contained update automatically, then restart the app.
 
 ## How it works
 
@@ -46,6 +47,6 @@ Administrator elevation is only requested when Fog Switcher needs to write to `C
 GitHub Releases can provide two Windows download variants:
 
 - `framework-dependent` package: a smaller `.zip` that contains the app files and requires the matching .NET Desktop Runtime to already be installed on the machine.
-- `self-contained` executable: a larger standalone `.exe` that includes the required .NET runtime and is easier to run on a machine that does not already have it installed.
+- `self-contained` executable: a larger standalone `.exe` that includes the required .NET runtime and is also the package used for automatic in-app updates.
 
-When a release contains multiple valid download assets, Fog Switcher opens the release page so the user can choose the package that fits their system.
+When a newer release is detected, Fog Switcher can download and install the self-contained package automatically, or open the GitHub release page if the user wants to choose manually.

@@ -1276,29 +1276,24 @@ internal sealed class MainForm : Form
 
     private sealed class SmoothScrollPane : Panel
     {
-        private readonly Panel _viewport;
+        private readonly BufferedPanel _viewport;
         private readonly FlatVScrollBar _vbar;
+        private readonly System.Windows.Forms.Timer _scrollTimer;
         private Control? _content;
+        private int _pendingScrollValue;
 
         // Buffer all descendant paints into one back buffer → no mid-scroll flicker.
-        protected override CreateParams CreateParams
-        {
-            get
-            {
-                var cp = base.CreateParams;
-                cp.ExStyle |= 0x02000000; // WS_EX_COMPOSITED
-                return cp;
-            }
-        }
-
         public SmoothScrollPane()
         {
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
             DoubleBuffered = true;
             _vbar = new FlatVScrollBar { Dock = DockStyle.Right, Width = 8 };
-            _viewport = new Panel { Dock = DockStyle.Fill, AutoScroll = false };
+            _viewport = new BufferedPanel { Dock = DockStyle.Fill, AutoScroll = false };
+            _scrollTimer = new System.Windows.Forms.Timer { Interval = 16 };
 
-            _vbar.ValueChanged += (_, _) => ApplyScroll();
+            _vbar.ValueChanged += (_, _) => QueueScroll();
             _viewport.Resize   += (_, _) => Sync();
+            _scrollTimer.Tick += (_, _) => FlushPendingScroll();
 
             // Dock.Right is processed before Dock.Fill — add viewport first (index 0), vbar second (index 1)
             Controls.Add(_viewport);
@@ -1320,6 +1315,15 @@ internal sealed class MainForm : Form
             _vbar.Value += delta;
         }
 
+        private void QueueScroll()
+        {
+            _pendingScrollValue = _vbar.Value;
+            if (!_scrollTimer.Enabled)
+            {
+                _scrollTimer.Start();
+            }
+        }
+
         private void Sync()
         {
             if (_content is null) return;
@@ -1327,13 +1331,49 @@ internal sealed class MainForm : Form
             var max = Math.Max(0, _content.Height - _viewport.Height);
             _vbar.SetMaximum(max);
             _vbar.Visible = max > 0;
-            ApplyScroll();
+            _pendingScrollValue = _vbar.Value;
+            ApplyScroll(_pendingScrollValue);
         }
 
-        private void ApplyScroll()
+        private void FlushPendingScroll()
+        {
+            ApplyScroll(_pendingScrollValue);
+            if (_content is null || _content.Top == -_pendingScrollValue)
+            {
+                _scrollTimer.Stop();
+            }
+        }
+
+        private void ApplyScroll(int value)
         {
             if (_content is null) return;
-            _content.Top = -_vbar.Value;
+
+            var targetTop = -value;
+            if (_content.Top == targetTop)
+            {
+                return;
+            }
+
+            _content.Top = targetTop;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _scrollTimer.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
+    }
+
+    private sealed class BufferedPanel : Panel
+    {
+        public BufferedPanel()
+        {
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
+            DoubleBuffered = true;
         }
     }
 
@@ -1357,7 +1397,16 @@ internal sealed class MainForm : Form
 
         public event EventHandler? ValueChanged;
 
-        public FlatVScrollBar() => DoubleBuffered = true;
+        public FlatVScrollBar()
+        {
+            SetStyle(
+                ControlStyles.AllPaintingInWmPaint |
+                ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.ResizeRedraw |
+                ControlStyles.UserPaint,
+                true);
+            DoubleBuffered = true;
+        }
 
         [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public int Value

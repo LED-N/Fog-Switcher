@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>FogSwitcher</RootNamespace>
+    <AssemblyName>FogSwitcher</AssemblyName>
+    <ApplicationTitle>Fog Switcher</ApplicationTitle>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <InformationalVersion>1.0.0</InformationalVersion>
+    <GeneratedAppIcon>$(IntermediateOutputPath)app.ico</GeneratedAppIcon>
+    <ApplicationIcon>$(GeneratedAppIcon)</ApplicationIcon>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\app_icon.png" LogicalName="FogSwitcher.Assets.app_icon.png" />
+  </ItemGroup>
+
+  <Target Name="GenerateAppIcon" BeforeTargets="CoreCompile">
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+    <Exec
+      Command="powershell.exe -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\Build-AppIcon.ps1&quot; -SourcePath &quot;$(MSBuildProjectDirectory)\Assets\app_icon.png&quot; -DestinationPath &quot;$(GeneratedAppIcon)&quot;" />
+  </Target>
+
+</Project>

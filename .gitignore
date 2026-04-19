@@ -1,13 +1,9 @@
-/.claude/
 /.dotnet/
 /.vs/
 /dist/
-/ref-make-your-choice/
-/src/FogSwitcher/app.ico
 **/bin/
 **/obj/
 *.log
 *.pubxml.user
 *.suo
 *.user
-tmp-test.ico

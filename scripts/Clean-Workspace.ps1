@@ -9,13 +9,9 @@ if (Get-Process -Name devenv -ErrorAction SilentlyContinue) {
 }
 
 $pathsToRemove = @(
-    ".claude",
     ".dotnet",
     ".vs",
-    "dist",
-    "src\FogSwitcher\bin",
-    "src\FogSwitcher\obj",
-    "src\FogSwitcher\app.ico"
+    "dist"
 )
 
 foreach ($relativePath in $pathsToRemove) {
@@ -31,6 +27,22 @@ foreach ($relativePath in $pathsToRemove) {
         }
     }
 }
+
+Get-ChildItem -Path $projectRoot -Recurse -Directory -Force |
+    Where-Object { $_.Name -in @("bin", "obj") } |
+    Sort-Object FullName -Descending |
+    ForEach-Object {
+        $fullPath = $_.FullName
+        $relativePath = Resolve-Path -LiteralPath $fullPath -Relative
+        try {
+            Remove-Item -LiteralPath $fullPath -Recurse -Force
+            Write-Output "Removed $relativePath"
+        }
+        catch {
+            $failures.Add($relativePath)
+            Write-Warning "Could not fully remove $relativePath : $($_.Exception.Message)"
+        }
+    }
 
 $patterns = @("*.user", "*.pubxml.user", "*.suo", "*.log")
 foreach ($pattern in $patterns) {

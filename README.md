@@ -1,84 +1,42 @@
-# Fog Switcher
+<p align="center">
+  <img src="src/FogSwitcher/Assets/app_icon.png" alt="Fog Switcher icon" width="160" />
+</p>
 
-`Fog Switcher` est un prototype de server selector pour Dead by Daylight, inspire par `Make Your Choice` mais reconstruit avec une interface originale et un scope volontairement simple.
+<h1 align="center">Fog Switcher</h1>
 
-## Ce que fait l'app
+<p align="center">
+  A lightweight Windows utility for checking Dead by Daylight region status and managing region locks through the Windows hosts file.
+</p>
 
-- affiche les regions DbD principales
-- mesure la latence avec un code couleur `vert / jaune / orange / rouge`
-- affiche les queues times `killer` et `survivor`
-- utilise les endpoints publics de `deadbyqueue.com`
-- permet de cocher une ou plusieurs regions a garder ouvertes
-- ecrit une section dediee dans le fichier `hosts` Windows pour bloquer les autres regions
-- peut retirer uniquement sa propre section sans toucher aux autres lignes du `hosts`
+## Overview
 
-## UI et logique
+Fog Switcher is a desktop companion for players who want a simple way to inspect available Dead by Daylight regions and control which ones remain reachable from Windows.
 
-- `Use Best Ping` coche automatiquement la meilleure region disponible selon la mesure actuelle
-- `Apply Selection` peut demander une elevation Windows uniquement au moment d'ecrire dans `C:\Windows\System32\drivers\etc\hosts`
-- `Clear Locks` retire le bloc cree par l'application
-- l'app reste consultable sans droits admin pour le ping et les queues
-- `app_icon.png` est maintenant la source unique des icones Windows, l'`.ico` etant regenere au build
+The app combines live latency checks, queue estimates, and a focused region-lock workflow in a single interface. It is designed to stay usable without administrator rights for browsing region information, and only asks for elevation when a hosts file change is required.
 
-## Build
+## What the app does
 
-### Visual Studio
+- Measures latency across the main Dead by Daylight regions with a color-coded status.
+- Displays estimated killer and survivor queue times.
+- Lets you keep one or more preferred regions enabled.
+- Writes a dedicated Fog Switcher block to the Windows `hosts` file to block other regions.
+- Removes only the entries created by Fog Switcher when you clear the selection.
+- Checks GitHub Releases at startup and can offer a newer version when one is available.
 
-1. Ouvrir [FogSwitcher.sln](./FogSwitcher.sln)
-2. Selectionner `Release | x64` si tu veux republier proprement
-3. Compiler ou publier le projet `FogSwitcher`
+## How it works
 
-### CLI
+Fog Switcher retrieves region and queue information from the public Dead by Queue API, then uses your selection to update a managed section of the Windows `hosts` file.
 
-Build simple :
+That means the application does not overwrite the whole file. It only maintains its own block, which helps keep existing custom entries untouched.
 
-```powershell
-dotnet build .\src\FogSwitcher\FogSwitcher.csproj
-```
+## Data source
 
-Publish `.exe` autonome :
+- Queue and region data: `https://api2.deadbyqueue.com/`
 
-```powershell
-dotnet publish .\src\FogSwitcher\FogSwitcher.csproj `
-  -c Release `
-  -r win-x64 `
-  --self-contained true `
-  -p:PublishSingleFile=true `
-  -p:DebugType=None `
-  -p:DebugSymbols=false `
-  -p:NuGetAudit=false
-```
+Fog Switcher is an independent project and is not affiliated with Behaviour Interactive or Dead by Queue.
 
-## Mises a jour via GitHub Releases
+## Windows permissions
 
-- Le projet contient maintenant une verification de mise a jour au lancement.
-- Pour l'activer, renseigner `GitHubRepository` dans [src/FogSwitcher/UpdateChannel.cs](./src/FogSwitcher/UpdateChannel.cs) au format `owner/repository`.
-- Publier ensuite chaque version sur GitHub Releases avec un tag semantique comme `v1.0.1` et joindre au minimum `FogSwitcher.exe`.
-- Au lancement, si une release plus recente est detectee, l'app proposera d'ouvrir directement la page ou l'asset de telechargement.
+Reading region information does not require administrator rights.
 
-## Sortie de publish
-
-Apres un publish single-file, le binaire se trouve ici :
-
-`src/FogSwitcher/bin/Release/net10.0-windows/win-x64/publish/FogSwitcher.exe`
-
-Ce dossier ne doit pas etre commit sur GitHub.
-
-## Nettoyage avant commit
-
-- Le depot est configure pour ignorer automatiquement `.vs/`, `.dotnet/`, `bin/`, `obj/`, `dist/`, les fichiers `*.user`, `*.suo` et `*.log`.
-- Si tu veux aussi nettoyer physiquement le dossier avant un commit ou avant de partager le projet, lance :
-- Ferme Visual Studio avant ce nettoyage si tu veux eviter que `.vs/`, `bin/`, `obj/` ou `app.ico` soient recrees pendant l'operation.
-- Si tu veux aussi nettoyer physiquement le dossier avant un commit ou avant de partager le projet, lance :
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\Clean-Workspace.ps1
-```
-
-- Ce script supprime les artefacts IDE/build/publish locaux et laisse uniquement les fichiers utiles du projet.
-
-## Notes
-
-- Le fichier `hosts` est sauvegarde automatiquement en `hosts.bak` avant ecriture.
-- Les queues proviennent d'un service tiers : `https://api2.deadbyqueue.com/`.
-- L'application n'est pas affiliee a Behaviour Interactive.
+Administrator elevation is only requested when Fog Switcher needs to write to `C:\Windows\System32\drivers\etc\hosts`.

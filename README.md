@@ -46,7 +46,9 @@ Administrator elevation is only requested when Fog Switcher needs to write to `C
 
 GitHub Releases can provide two Windows download variants:
 
-- `framework-dependent` package: a smaller `.zip` that contains the app files and requires the matching .NET Desktop Runtime to already be installed on the machine.
-- `self-contained` executable: a larger standalone `.exe` that includes the required .NET runtime and is also the package used for automatic in-app updates.
+- `FogSwitcher-framework-dependant.zip`: a smaller framework-dependent package that contains the app files and requires the Microsoft .NET Desktop Runtime 10 x64 to already be installed on the machine.
+- `FogSwitcher.exe`: the self-contained executable that includes the required .NET runtime and is also the package used for automatic in-app updates.
+
+If the user chooses the framework-dependent package, they must extract the `.zip` and run `FogSwitcher.exe` from the extracted folder.
 
 When a newer release is detected, Fog Switcher can download and install the self-contained package automatically, or open the GitHub release page if the user wants to choose manually.

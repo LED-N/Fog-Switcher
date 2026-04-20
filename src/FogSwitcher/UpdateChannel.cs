@@ -3,7 +3,8 @@ namespace FogSwitcher;
 internal static class UpdateChannel
 {
     public const string GitHubRepository = "LED-N/Fog-Switcher";
-    public const string PreferredAutomaticUpdateAssetName = "FogSwitcher-win-x64-self-contained.exe";
+    public const string PreferredAutomaticUpdateAssetName = "FogSwitcher.exe";
+    public const string LegacyAutomaticUpdateAssetName = "FogSwitcher-win-x64-self-contained.exe";
 
     public static (string Owner, string Name)? TryGetRepository()
     {

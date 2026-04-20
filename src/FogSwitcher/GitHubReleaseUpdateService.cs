@@ -92,7 +92,9 @@ internal sealed class GitHubReleaseUpdateService : IDisposable
             return null;
         }
 
-        var automaticInstall = FindAssetByName(root, UpdateChannel.PreferredAutomaticUpdateAssetName);
+        var automaticInstall =
+            FindAssetByName(root, UpdateChannel.PreferredAutomaticUpdateAssetName) ??
+            FindAssetByName(root, UpdateChannel.LegacyAutomaticUpdateAssetName);
 
         return new AvailableUpdate
         {
